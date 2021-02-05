@@ -60,9 +60,11 @@ class Game():
     def turn(self):
         if self.turns % 2 == 0:
             token = 1
+            ##choice = self.find_best_move(token)
         else:
+            ##Human plays second
             token = -1
-        
+
         ##Validate column choice
         while True:
             try:
@@ -70,7 +72,7 @@ class Game():
             except:
                 print("Invalid choice")
                 continue
-                
+                            
             if choice < 0 or choice > 6:
                 print("Invalid choice")
                 continue
@@ -78,6 +80,9 @@ class Game():
                 print("Column full")
                 continue
             break
+                
+        
+        
         
         self.state[5-self.heights[choice]][choice] = token
         self.heights[choice] += 1
@@ -94,6 +99,86 @@ class Game():
         elif 0 not in self.state:
             print("Game is drawn")
             self.reset()
+    
+    ##Returns the column choice
+    def find_best_move(self, ai_token : int) -> int:
+        best_move = None
+        best_eval = -10000
+
+        ##Search valid moves
+        for col in range(7):
+            if self.heights[col] < 6:
+                self.state[5-self.heights[col]][col] = ai_token
+                self.heights[col] += 1
+                ##Depth->0 is the the start of the game. Depth->42 is the end
+                curr_depth = len(np.where(self.state!=0)[0])
+                ##Initial alpha = -1000 , beta = 1000
+                move_eval = self.minimax(curr_depth, False, ai_token, -1000, 1000)
+                
+
+                if move_eval > best_eval:
+                    best_eval = move_eval
+                    best_move = col
+
+                self.heights[col] -= 1
+                self.state[5-self.heights[col]][col] = 0
+        
+        return best_move
+    
+    def minimax(self, depth : int, is_max : bool, ai_token : int, alpha : int, beta : int) -> int:
+        print(self.state)
+        ##AI win
+        if is_max and self.check_win(ai_token):
+            return 100
+        ##Opponent win
+        elif not is_max and self.check_win(- ai_token):
+            return -100
+        ##Draw
+        elif 0 not in self.state:
+            return 0
+
+        ##Maximsing player -> AI
+        if is_max:
+            best_eval = -10000
+
+            ##Search valid mvoes
+            for col in range(7):
+                if self.heights[col]  < 6:
+
+                    self.state[5-self.heights[col]][col] = ai_token
+                    self.heights[col] += 1
+                    move_eval = self.minimax(depth+1,not is_max, ai_token, alpha, beta)
+                    self.heights[col] -= 1
+                    self.state[5-self.heights[col]][col] = 0
+
+                    best_eval = max(best_eval, move_eval)
+                    alpha = max(alpha, best_eval)
+
+                    if beta <= alpha:
+                        break
+            return best_eval
+
+        ##Minimising player -> Human
+        elif not is_max:
+            best_eval = 10000
+
+            ##Search valid moves
+            for col in range(7):
+                if self.heights[col] < 6:
+
+                    self.state[5-self.heights[col]][col] = - ai_token
+                    self.heights[col] += 1
+                    move_eval = self.minimax(depth+1, not is_max, ai_token, alpha, beta)
+                    self.heights[col] -= 1
+                    self.state[5-self.heights[col]][col] = 0
+
+                    best_eval = min(best_eval, move_eval)
+                    beta = min(beta, best_eval)
+
+                    if beta <= alpha:
+                        break
+            return best_eval
+        
 
 game = Game()
 while True:
