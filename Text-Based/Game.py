@@ -4,15 +4,15 @@ class Game():
 
     def __init__(self):
         ##0 represents empty place
-        ##state[0] is top row, last to be filled
-        ##pieces fall to state[6]
-        self.state = np.zeros((6,7),dtype=int)
-        self.heights = np.zeros(7,dtype=int)
+        ##rows represent columns in the board, columns represent rows
+        ##Top row is left column, bottom is right
+        ##Pieces 'fall' to the end of the row
+        self.state = np.zeros((7,6),dtype=int)
         self.turns = 0
 
     def output(self):
         print("------------------------------")
-        for row in self.state:
+        for row in self.state.T:
             print(end = "|")
             for col in row:
                 if col == 1:
@@ -29,28 +29,29 @@ class Game():
         self.__init__()
 
     ##Check for four in a row -> win condition 
-    def check_win(self,token : int) -> bool:
+    ##State has shape (7,6)
+    def check_win(self,token : int, state : np.ndarray) -> bool:
         ##Check rows
-        for row in self.state:
-            if self.check_four(row,token):
-                ##Win occurs
-                return True
-        
-        ##Check columns
-        for col in self.state.T:
+        for col in state:
             if self.check_four(col,token):
                 ##Win occurs
-                return True
+                return token
+        
+        ##Check columns
+        for row in state.T:
+            if self.check_four(row,token):
+                ##Win occurs
+                return token
 
         ##Check diagonals
-        for offset in range(-2,4):
-            for_diag = np.diagonal(self.state, offset=offset)
-            back_diag = np.diagonal(np.fliplr(self.state),offset=offset)
+        for offset in range(-3,3):
+            for_diag = np.diagonal(state, offset=offset)
+            back_diag = np.diagonal(np.fliplr(state),offset=offset)
             if self.check_four(for_diag,token) or self.check_four(back_diag,token):
                 ##Win occurs
-                return True
-        
-        return False
+                return token
+
+        return 0
 
     ##Check an array for a sequence of four identical values
     def check_four(self, arr : np.ndarray, token : int) -> bool:
@@ -58,6 +59,7 @@ class Game():
         return any(i==j-1 and j==k-1 and k==l-1 for i,j,k,l in zip(inds,inds[1:],inds[2:],inds[3:]))
 
     def turn(self):
+        self.output()
         if self.turns % 2 == 0:
             token = 1
             ##choice = self.find_best_move(token)
@@ -76,24 +78,23 @@ class Game():
             if choice < 0 or choice > 6:
                 print("Invalid choice")
                 continue
-            elif self.heights[choice] == 6:
+            elif self.state[choice][0] != 0:
                 print("Column full")
                 continue
             break
                 
-        
-        
-        
-        self.state[5-self.heights[choice]][choice] = token
-        self.heights[choice] += 1
+        ##Choice is the row in self.state to update
+        ##Find the column, filling from end of row
+        ##np.count_nonzero returns number of non-zero elements in array
+        new_row = 5 - np.count_nonzero(self.state[choice]) 
+        self.state[choice][new_row] = token
+        status = self.check_win(token, self.state)
         self.turns += 1
-
-        status = self.check_win(token)
-        if status:
+        if status != 0:
             self.output()
             if token == 1:
                 print("Player 1 wins")
-            elif token == 2:
+            elif token == -1:
                 print("Player 2 wins")
             self.reset()
         elif 0 not in self.state:
@@ -182,5 +183,5 @@ class Game():
 
 game = Game()
 while True:
-    game.output()
+    
     game.turn()
