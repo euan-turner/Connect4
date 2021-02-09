@@ -35,13 +35,13 @@ class Game():
         for col in state:
             if self.check_four(col,token):
                 ##Win occurs
-                return token
+                return True
         
         ##Check columns
         for row in state.T:
             if self.check_four(row,token):
                 ##Win occurs
-                return token
+                return True
 
         ##Check diagonals
         for offset in range(-3,3):
@@ -49,49 +49,61 @@ class Game():
             back_diag = np.diagonal(np.fliplr(state),offset=offset)
             if self.check_four(for_diag,token) or self.check_four(back_diag,token):
                 ##Win occurs
-                return token
+                return True
 
-        return 0
+        return False
 
     ##Check an array for a sequence of four identical values
     def check_four(self, arr : np.ndarray, token : int) -> bool:
-        inds = np.where(arr==token)[0]
-        return any(i==j-1 and j==k-1 and k==l-1 for i,j,k,l in zip(inds,inds[1:],inds[2:],inds[3:]))
+        for i in range(len(arr)-3):
+            if (arr[i] == token) and (arr[i+1] == token) and \
+               (arr[i+2] == token) and (arr[i+3] == token):
+               return True
+        return False
+
+    ##Returns all valid moves for  a board state
+    def valid_moves(self, curr_state : np.ndarray):
+        moves = []
+        for col in curr_state:
+            if col[0] == 0:
+                moves.append(col)
+        return moves
+    
+    ##Token is placed in specified column of state
+    def make_move(self, token, col, state):
+        new_row = 5-np.count_nonzero(state[col])
+        state[col][new_row] = token
+        self.turns += 1
 
     def turn(self):
         self.output(self.state)
         if self.turns % 2 == 0:
             token = 1
-            ##Validate column choice
-            while True:
-                try:
-                    choice = int(input("Enter column (1-7): ")) -1
-                except:
-                    print("Invalid choice")
-                    continue
-                                
-                if choice < 0 or choice > 6:
-                    print("Invalid choice")
-                    continue
-                elif self.state[choice][0] != 0:
-                    print("Column full")
-                    continue
-                break
             
         else:
             token = -1
-            choice = self.find_best_move(token)
+            ##choice = self.find_best_move(token)
 
+        ##Validate column choice
+        while True:
+            try:
+                choice = int(input("Enter column (1-7): ")) -1
+            except:
+                print("Invalid choice")
+                continue
+                            
+            if choice < 0 or choice > 6:
+                print("Invalid choice")
+                continue
+            elif self.state[choice][0] != 0:
+                print("Column full")
+                continue
+            break
         
-                
-        ##Choice is the row in self.state to update
-        ##Find the column, filling from end of row
-        ##np.count_nonzero returns number of non-zero elements in array
-        new_row = 5 - np.count_nonzero(self.state[choice]) 
-        self.state[choice][new_row] = token
+        self.make_move(token, choice, self.state)
+
         status = self.check_win(token, self.state)
-        self.turns += 1
-        if status != 0:
+        if status:
             self.output(self.state)
             if token == 1:
                 print("Player 1 wins")
@@ -102,7 +114,7 @@ class Game():
             print("Game is drawn")
             self.reset()
             
-'''
+
     ##Returns the column choice
     def find_best_move(self, ai_token : int) -> int:
         best_move = None
@@ -110,6 +122,7 @@ class Game():
 
         eval_state = self.state.copy()
 
+        
         ##Search valid moves
         for col in range(7):
             ##Column is not full
@@ -180,7 +193,7 @@ class Game():
         ##self.output(eval_state)
         ##print(best_eval)
         return best_eval
-'''
+
 game = Game()
 while True:
     
