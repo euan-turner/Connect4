@@ -74,6 +74,7 @@ class Game():
         new_row = 5-np.count_nonzero(state[col])
         state[col][new_row] = token
         self.turns += 1
+        return new_row
 
     def turn(self):
         self.output(self.state)
@@ -110,35 +111,46 @@ class Game():
             elif token == -1:
                 print("Player 2 wins")
             self.reset()
-        elif 0 not in self.state:
+        elif self.turns == 42:
             print("Game is drawn")
             self.reset()
             
 
     ##Returns the column choice
     def find_best_move(self, ai_token : int) -> int:
+        opp_token = - ai_token
+
         best_move = None
         best_eval = -10000
 
         eval_state = self.state.copy()
 
-        
-        ##Search valid moves
-        for col in range(7):
-            ##Column is not full
-            if eval_state[col][0] == 0:
-                row = 5 - np.count_nonzero(eval_state[col])
-                eval_state[col][row] = ai_token
-                ##Depth -> 0 - start, Depth -> 42 - end
-                curr_depth = np.count_nonzero(eval_state)
-                ##Inital alpha -> -10000, Initial beta -> 10000
-                move_eval = self.minimax(eval_state, curr_depth, False, ai_token, -10000, 10000)
-                eval_state[col][row] = 0
 
-                if move_eval > best_eval:
-                    best_eval = move_eval
-                    best_move = col
-        
+        ##Search valid moves
+        for move in valid_moves(eval_state):
+            row = self.make_move(ai_token, move, eval_state)
+            move_eval = self.minimax(eval_state, self.turns+1, False, ai_token, -10000, 10000)
+            ##Undo move from state
+            eval_state[move][row] = 0
+            if move_eval > best_eval:
+                best_eval = move_eval
+                best_move = move
+
+        # for col in range(7):
+        #     ##Column is not full
+        #     if eval_state[col][0] == 0:
+        #         row = 5 - np.count_nonzero(eval_state[col])
+        #         eval_state[col][row] = ai_token
+        #         ##Depth -> 0 - start, Depth -> 42 - end
+        #         curr_depth = np.count_nonzero(eval_state)
+        #         ##Inital alpha -> -10000, Initial beta -> 10000
+        #         move_eval = self.minimax(eval_state, curr_depth, False, ai_token, -10000, 10000)
+        #         eval_state[col][row] = 0
+
+        #         if move_eval > best_eval:
+        #             best_eval = move_eval
+        #             best_move = col
+
         return best_move
 
     def minimax(self, eval_state : np.ndarray, depth : int, is_max : bool, ai_token : int, alpha : int, beta : int) -> int:
