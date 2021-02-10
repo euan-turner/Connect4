@@ -5,14 +5,13 @@ class Game():
     def __init__(self):
         ##0 represents empty place
         ##rows represent columns in the board, columns represent rows
-        ##Top row is left column, bottom is right
-        ##Pieces 'fall' to the end of the row
+        ##Pieces placed from left to right
         self.state = np.zeros((7,6),dtype=int)
         self.turns = 0
 
-    def output(self, state):
+    def output(self):
         print("------------------------------")
-        for row in state.T:
+        for row in np.fliplr(self.state).T:
             print(end = "|")
             for col in row:
                 if col == 1:
@@ -44,7 +43,7 @@ class Game():
                 return True
 
         ##Check diagonals
-        for offset in range(-3,3):
+        for offset in range(-2,4):
             for_diag = np.diagonal(state, offset=offset)
             back_diag = np.diagonal(np.fliplr(state),offset=offset)
             if self.check_four(for_diag,token) or self.check_four(back_diag,token):
@@ -65,19 +64,19 @@ class Game():
     def valid_moves(self, curr_state : np.ndarray):
         moves = []
         for col in curr_state:
-            if col[0] == 0:
+            if col[5] == 0:
                 moves.append(col)
         return moves
     
     ##Token is placed in specified column of state
     def make_move(self, token, col, state):
-        new_row = 5-np.count_nonzero(state[col])
+        new_row = np.count_nonzero(state[col])
         state[col][new_row] = token
         self.turns += 1
         return new_row
 
     def turn(self):
-        self.output(self.state)
+        self.output()
         if self.turns % 2 == 0:
             token = 1
             
@@ -96,7 +95,7 @@ class Game():
             if choice < 0 or choice > 6:
                 print("Invalid choice")
                 continue
-            elif self.state[choice][0] != 0:
+            elif self.state[choice][5] != 0:
                 print("Column full")
                 continue
             break
@@ -105,7 +104,7 @@ class Game():
 
         status = self.check_win(token, self.state)
         if status:
-            self.output(self.state)
+            self.output()
             if token == 1:
                 print("Player 1 wins")
             elif token == -1:
@@ -115,7 +114,7 @@ class Game():
             print("Game is drawn")
             self.reset()
             
-
+'''
     ##Returns the column choice
     def find_best_move(self, ai_token : int) -> int:
         opp_token = - ai_token
@@ -129,7 +128,8 @@ class Game():
         ##Search valid moves
         for move in valid_moves(eval_state):
             row = self.make_move(ai_token, move, eval_state)
-            move_eval = self.minimax(eval_state, self.turns+1, False, ai_token, -10000, 10000)
+            ##Call to a depth of 15
+            move_eval = self.minimax(eval_state, 15, False, opp_token, -10000, 10000)
             ##Undo move from state
             eval_state[move][row] = 0
             if move_eval > best_eval:
@@ -153,17 +153,16 @@ class Game():
 
         return best_move
 
-    def minimax(self, eval_state : np.ndarray, depth : int, is_max : bool, ai_token : int, alpha : int, beta : int) -> int:
+    ##Depth is the maximum search depth from the state minimax is called at
+    def minimax(self, eval_state : np.ndarray, depth : int, is_max : bool, curr_token : int, alpha : int, beta : int) -> int:
+        legal_moves = self.valid_moves(eval_state)
+        ##Last move made was a winning move
+        if self.check_win(- curr_token, eval_state):
+            return 
+        ##If node is terminal
+        if depth == 0 or len(legal_moves) == 0:
+            pass
         
-        ##AI win
-        if is_max and self.check_win(ai_token,eval_state) == ai_token:
-            return 100
-        ##Opponent win
-        elif not is_max and self.check_win(- ai_token, eval_state) == -(ai_token):
-            return -100
-        ##Draw
-        elif 0 not in eval_state:
-            return 0
 
         ##Maximising player -> AI
         if is_max:
@@ -205,7 +204,7 @@ class Game():
         ##self.output(eval_state)
         ##print(best_eval)
         return best_eval
-
+'''
 game = Game()
 while True:
     
