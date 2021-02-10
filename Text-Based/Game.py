@@ -29,36 +29,50 @@ class Game():
 
     ##Check for four in a row -> win condition 
     ##State has shape (7,6)
-    def check_win(self,token : int, state : np.ndarray) -> bool:
-        ##Check rows
-        for col in state:
-            if self.check_four(col,token):
-                ##Win occurs
-                return True
-        
-        ##Check columns
-        for row in state.T:
-            if self.check_four(row,token):
-                ##Win occurs
-                return True
+    def check_win(self, state : np.ndarray) -> bool:
+        ##print(self.find_streaks(state, 1, 4) >= 1)
+        ##print(self.find_streaks(state,-1,4) >= 1)
+        if (self.find_streaks(state, 1, 4) >= 1) \
+            or (self.find_streaks(state,-1,4) >= 1):
+            return True
+        else:
+            return False
+    
+    ##Create arrays for all directions, and call count_streaks on them
+    def find_streaks(self,state : np.ndarray, token : int, length : int) -> int:
+        total_streaks = 0
+        check_state = state
 
-        ##Check diagonals
-        for offset in range(-2,4):
-            for_diag = np.diagonal(state, offset=offset)
-            back_diag = np.diagonal(np.fliplr(state),offset=offset)
-            if self.check_four(for_diag,token) or self.check_four(back_diag,token):
-                ##Win occurs
-                return True
+        for col in check_state:
+            total_streaks += self.count_streaks(col,token,length)
 
-        return False
+        for row in check_state.T:
+            total_streaks += self.count_streaks(row,token,length)
 
-    ##Check an array for a sequence of four identical values
-    def check_four(self, arr : np.ndarray, token : int) -> bool:
-        for i in range(len(arr)-3):
-            if (arr[i] == token) and (arr[i+1] == token) and \
-               (arr[i+2] == token) and (arr[i+3] == token):
-               return True
-        return False
+        for offset in range(-5,6):
+            for_diag = np.diagonal(check_state,offset=offset)
+            back_diag = np.diagonal(np.fliplr(check_state),offset=offset)
+            total_streaks += self.count_streaks(for_diag,token,length)
+            total_streaks += self.count_streaks(back_diag,token,length)
+        ##if self.turns == 7:
+            ##print(total_streaks, token)
+        return total_streaks
+
+    ##Count the number of streaks, of a length, in a 1-D array
+    def count_streaks(self, arr : np.ndarray, token : int, length : int) -> int:
+        if len(arr) < length:
+            return 0
+        else:
+            total = 0
+            for i in range(0, len(arr)-length+1):
+                streak = arr[i:i+length]
+                ##if self.turns == 7:
+                    ##print(streak)
+
+                if len(np.where(streak==token)[0]) == length:
+                    total += 1
+
+        return total
 
     ##Returns all valid moves for  a board state
     def valid_moves(self, curr_state : np.ndarray):
@@ -102,7 +116,7 @@ class Game():
         
         self.make_move(token, choice, self.state)
 
-        status = self.check_win(token, self.state)
+        status = self.check_win(self.state)
         if status:
             self.output()
             if token == 1:
