@@ -77,8 +77,8 @@ class Game():
     ##Returns all valid moves for  a board state
     def valid_moves(self, curr_state : np.ndarray):
         moves = []
-        for col in curr_state:
-            if col[5] == 0:
+        for col in range(len(curr_state)):
+            if curr_state[col][5] == 0:
                 moves.append(col)
         return moves
     
@@ -86,36 +86,50 @@ class Game():
     def make_move(self, token, col, state):
         new_row = np.count_nonzero(state[col])
         state[col][new_row] = token
-        self.turns += 1
         return new_row
 
     def turn(self):
         self.output()
         if self.turns % 2 == 0:
             token = 1
+            ##Validate column choice
+            while True:
+                try:
+                    choice = int(input("Enter column (1-7): ")) -1
+                except:
+                    print("Invalid choice")
+                    continue
+                                
+                if choice < 0 or choice > 6:
+                    print("Invalid choice")
+                    continue
+                elif self.state[choice][5] != 0:
+                    print("Column full")
+                    continue
+                break
             
         else:
             token = -1
-            ##choice = self.find_best_move(token)
+            choice = self.find_best_move(token)
 
-        ##Validate column choice
-        while True:
-            try:
-                choice = int(input("Enter column (1-7): ")) -1
-            except:
-                print("Invalid choice")
-                continue
+        # ##Validate column choice
+        # while True:
+        #     try:
+        #         choice = int(input("Enter column (1-7): ")) -1
+        #     except:
+        #         print("Invalid choice")
+        #         continue
                             
-            if choice < 0 or choice > 6:
-                print("Invalid choice")
-                continue
-            elif self.state[choice][5] != 0:
-                print("Column full")
-                continue
-            break
+        #     if choice < 0 or choice > 6:
+        #         print("Invalid choice")
+        #         continue
+        #     elif self.state[choice][5] != 0:
+        #         print("Column full")
+        #         continue
+        #     break
         
         self.make_move(token, choice, self.state)
-
+        self.turns += 1
         status = self.check_win(self.state)
         if status:
             self.output()
@@ -128,7 +142,7 @@ class Game():
             print("Game is drawn")
             self.reset()
             
-'''
+
     ##Returns the column choice
     def find_best_move(self, ai_token : int) -> int:
         opp_token = - ai_token
@@ -140,10 +154,10 @@ class Game():
 
 
         ##Search valid moves
-        for move in valid_moves(eval_state):
+        for move in self.valid_moves(eval_state):
             row = self.make_move(ai_token, move, eval_state)
             ##Call to a depth of 15
-            move_eval = self.minimax(eval_state, 15, False, opp_token, -10000, 10000)
+            move_eval = self.minimax(eval_state, 5, False, opp_token, -100000, 100000)
             ##Undo move from state
             eval_state[move][row] = 0
             if move_eval > best_eval:
@@ -164,61 +178,65 @@ class Game():
         #         if move_eval > best_eval:
         #             best_eval = move_eval
         #             best_move = col
-
+        print(best_move)
         return best_move
 
     ##Depth is the maximum search depth from the state minimax is called at
     def minimax(self, eval_state : np.ndarray, depth : int, is_max : bool, curr_token : int, alpha : int, beta : int) -> int:
+        ##print(depth)
         legal_moves = self.valid_moves(eval_state)
-        ##Last move made was a winning move
-        if self.check_win(- curr_token, eval_state):
-            return 
-        ##If node is terminal
-        if depth == 0 or len(legal_moves) == 0:
-            pass
+
+        ##If node is terminal -> reached search depth, filled board, or win condition met
+        if depth == 0 or len(legal_moves) == 0 or self.check_win(eval_state):
+            return self.evaluate(eval_state, curr_token)
         
 
         ##Maximising player -> AI
         if is_max:
-            best_eval = -10000
+            best_eval = -100000
 
             ##Search valid moves
-            for col in range(7):
-                ##Column is not full
-                if eval_state[col][0] == 0:
-                    row = 5 - np.count_nonzero(eval_state[col])
-                    eval_state[col][row] = ai_token
-                    move_eval = self.minimax(eval_state, depth+1, not is_max, ai_token, alpha, beta)
-                    eval_state[col][row] = 0
+            for move in legal_moves:
+                row = self.make_move(curr_token, move, eval_state)
+                move_eval = self.minimax(eval_state, depth-1, not is_max, - curr_token, alpha, beta)
+                eval_state[move][row] = 0
 
-                    best_eval = max(best_eval, move_eval)
-                    alpha = max(alpha, best_eval)
+                best_eval = max(best_eval, move_eval)
+                alpha = max(alpha, best_eval)
 
-                    if beta <= alpha:
-                        break
+                if beta <= alpha:
+                    break
 
         ##Minimising player -> Human
         elif not is_max:
-            best_eval = 10000
+            best_eval = 100000
 
             ##Search valid moves
-            for col in range(7):
-                ##Column is not full
-                if eval_state[col][0] == 0:
-                    row = 5 - np.count_nonzero(eval_state[col])
-                    eval_state[col][row] = -(ai_token)
-                    move_eval = self.minimax(eval_state, depth+1, not is_max, ai_token, alpha, beta)
-                    eval_state[col][row] = 0
+            for move in legal_moves:
+                row = self.make_move(curr_token, move, eval_state)
+                move_eval = self.minimax(eval_state, depth-1, not is_max, - curr_token, alpha, beta)
+                eval_state[move][row] = 0
 
-                    best_eval = min(best_eval, move_eval)
-                    beta = min(beta, move_eval)
+                best_eval = min(best_eval, move_eval)
+                beta = min(beta, move_eval)
 
-                    if beta <= alpha:
-                        break
-        ##self.output(eval_state)
-        ##print(best_eval)
+                if beta <= alpha:
+                    break
+       
         return best_eval
-'''
+
+    def evaluate(self, eval_state, curr_token):
+        opp_token = - curr_token
+
+        opp_fours = self.find_streaks(eval_state, opp_token, 4)
+        if opp_fours > 0:
+            return -10000
+        curr_fours = self.find_streaks(eval_state, curr_token, 4)
+        curr_threes = self.find_streaks(eval_state, curr_token, 3)
+        curr_twos = self.find_streaks(eval_state, curr_token, 2)
+        
+        return curr_fours * 10000 + curr_threes * 100 + curr_twos
+
 game = Game()
 while True:
     
